@@ -15,7 +15,7 @@ console.log('DB_URI in test:', process.env.DB_URI);
 
   try {
     console.log('Connecting to the database...');
-    const client = new MongoClient(DB_URI, { useUnifiedTopology: true });
+    const client = new MongoClient(DB_URI);
     await client.connect();
     console.log('Connected successfully!');
     await client.close();
