@@ -33,10 +33,10 @@ const getIssues = async (req, res) => {
     if (result && result.length > 0) {
       return res.json(result.map((i) => i.issues));
     } else {
-      return res.json({ error: 'no issues found', _id });
+      return res.json([]); // Array vuoto se non ci sono risultati
     }
   } catch (err) {
-    return res.json({ error: 'no issues found', _id, err });
+    return res.json([]); // Array vuoto in caso di errore
   }
 };
 
@@ -96,36 +96,18 @@ const putIssue = async (req, res) => {
     }
   }
 
-  // if updateData has only id, return error
   if (Object.keys(updateData).length === 1) {
     return res.json({ error: 'no update field(s) sent', _id });
   }
 
   try {
     const $set = { updated_on: new Date() };
-    if (updateData.issue_title) {
-      $set.issue_title = updateData.issue_title;
-    }
-    if (updateData.issue_text) {
-      $set.issue_text = updateData.issue_text;
-    }
-    if (updateData.created_by) {
-      $set.created_by = updateData.created_by;
-    }
-    if (updateData.assigned_to) {
-      $set.assigned_to = updateData.assigned_to;
-    }
-    if (updateData.status_text) {
-      $set.status_text = updateData.status_text;
-    }
-    if (updateData.open) {
-      $set.open = updateData.open === '' || updateData.open === 'true';
-    }
-
-    for (const p in $set) {
-      $set[`issues.$.${p}`] = $set[p];
-      delete $set[p];
-    }
+    if (updateData.issue_title) $set[`issues.$.issue_title`] = updateData.issue_title;
+    if (updateData.issue_text) $set[`issues.$.issue_text`] = updateData.issue_text;
+    if (updateData.created_by) $set[`issues.$.created_by`] = updateData.created_by;
+    if (updateData.assigned_to) $set[`issues.$.assigned_to`] = updateData.assigned_to;
+    if (updateData.status_text) $set[`issues.$.status_text`] = updateData.status_text;
+    if (updateData.open) $set[`issues.$.open`] = updateData.open === 'true';
 
     const result = await Project.findOneAndUpdate(
       { name: req.params.project, 'issues._id': _id },
@@ -149,7 +131,7 @@ const deleteIssue = async (req, res) => {
     try {
       _id = new ObjectId(_id);
     } catch (err) {
-      return res.json({ error: 'could not delete' });
+      return res.json({ error: 'could not delete', _id });
     }
   } else {
     return res.json({ error: 'missing _id' });
@@ -158,8 +140,7 @@ const deleteIssue = async (req, res) => {
   try {
     const result = await Project.updateOne(
       { name: req.params.project },
-      { $pull: { issues: { _id } } },
-      { upsert: true, returnDocument: 'after' }
+      { $pull: { issues: { _id } } }
     ).exec();
     if (result && result.modifiedCount > 0) {
       return res.json({ result: 'successfully deleted', _id });
